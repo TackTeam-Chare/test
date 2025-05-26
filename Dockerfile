@@ -1,24 +1,20 @@
-# Stage 1: Build Angular
+# Step 1: Build Angular app
 FROM node:18-alpine AS builder
 
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm ci
-
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve with http-server
-FROM node:18-alpine
+# Step 2: Serve with NGINX
+FROM nginx:stable-alpine
 
-RUN npm install -g http-server
+# ✅ Copy build output (เปลี่ยนชื่อให้ตรง angular.json)
+COPY --from=builder /app/dist/anguar-test /usr/share/nginx/html
 
-# ✅ Copy ONLY the compiled browser output (not root dist)
-COPY --from=builder /app/dist/anguar-test/browser /app
+# ✅ ใช้ config ที่ support Angular routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-ENV PORT 8080
 EXPOSE 8080
-
-# ✅ Serve /app instead of /app/browser
-CMD ["http-server", "/app", "-p", "8080", "-c-1"]
+CMD ["nginx", "-g", "daemon off;"]
