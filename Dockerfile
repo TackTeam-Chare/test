@@ -1,23 +1,30 @@
-# Stage 1: Build Angular
+# Stage 1: Build Angular app
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Install dependencies
 COPY package*.json ./
 RUN npm ci
+
+# Copy source code and build
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve with NGINX
-FROM nginx:stable-alpine AS runner
+# Stage 2: Serve with http-server
+FROM node:18-alpine
 
-# ✅ Important: change NGINX to listen on port 8080
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Install http-server globally
+RUN npm install -g http-server
 
-# ✅ Copy build output
-COPY --from=builder /app/dist/anguar-test /usr/share/nginx/html
+# Copy built Angular app from builder stage
+COPY --from=builder /app/dist/anguar-test /app
 
-# ✅ Cloud Run requires EXPOSE 8080
+# Cloud Run requires PORT=8080
+ENV PORT 8080
+
+# Expose port for Cloud Run
 EXPOSE 8080
 
-CMD ["nginx", "-g", "daemon off;"]
+# Start the server
+CMD [ "http-server", "/app", "-p", "8080", "-c-1" ]
